@@ -2,7 +2,7 @@
  * @name Fake Mute&Deafen
  * @author TSB Inc.
  * @description Speak while Muted and Hear anyone while Deafened
- * @version 1.0.3
+ * @version 1.0.4
  * @authorLink https://github.com/TheScaryBoy
  * @website https://github.com/TheScaryBoy/BetterDiscord-Plugins
  * @source https://github.com/TheScaryBoy/BetterDiscord-Plugins/tree/main/FakeMuteDeafen
@@ -13,7 +13,7 @@ module.exports = class FakeMuteDeafen {
 
     getName()        { return "Fake Mute&Deafen"; }
     getDescription() { return "Speak while Muted and Hear anyone while Deafened"; }
-    getVersion()     { return "1.0.3"; }
+    getVersion()     { return "1.0.4"; }
     getAuthor()      { return "TSB Inc."; }
 
     // Discord webpack module IDs — update these if Discord changes them
@@ -329,41 +329,68 @@ Would you like to update now?`,
             const id = `${this.getName()}-toggle`;
             if (document.getElementById(id)) return;
 
+            // Use window (Discord app) dimensions — reliable across any monitor
+            const W = window.innerWidth, H = window.innerHeight;
+            const pos    = this._load("buttonPosition", { rx: 0.01, ry: 0.92 });
+            const left   = Math.max(0, Math.min(W - 32, Math.round((pos.rx ?? 0.01) * W)));
+            const bottom = Math.max(0, Math.min(H - 32, Math.round((pos.ry ?? 0.92) * H)));
+
             const c   = this.enabled ? "#ed4245" : "#3ba55d";
             const btn = document.createElement("div");
             btn.id = id;
-            btn.style.cssText = `width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);transition:box-shadow 0.2s,border 0.2s,transform 0.2s;box-shadow:0 0 12px ${c};border:2px solid ${c};flex-shrink:0;margin:0 4px;`;
+            btn.style.cssText = `position:fixed;bottom:${bottom}px;left:${left}px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:move;z-index:9999;user-select:none;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);transition:box-shadow 0.2s,border 0.2s,transform 0.2s;box-shadow:0 0 12px ${c};border:2px solid ${c};`;
             btn.innerHTML = `<img src="https://em-content.zobj.net/source/apple/391/skull_1f480.png" style="width:18px;height:18px;pointer-events:none;" draggable="false">`;
-            btn.title = `Click or ${this._keybindLabel()} to toggle`;
-            btn.addEventListener("click", () => this.toggle());
+            btn.title = `Drag to move | Click or ${this._keybindLabel()} to toggle`;
+
+            let drag = false, t0, x0, y0, b0, l0;
+            const onDown = e => { drag=true; t0=Date.now(); x0=e.clientX; y0=e.clientY; b0=parseInt(btn.style.bottom)||0; l0=parseInt(btn.style.left)||0; btn.style.cursor="grabbing"; btn.style.transition="none"; e.stopPropagation(); e.preventDefault(); };
+            const onMove = e => {
+                if (!drag) return;
+                const W = window.innerWidth, H = window.innerHeight;
+                btn.style.left   = Math.max(0, Math.min(W - 32, l0 + e.clientX - x0)) + "px";
+                btn.style.bottom = Math.max(0, Math.min(H - 32, b0 - e.clientY + y0)) + "px";
+            };
+            const onUp = e => {
+                if (!drag) return;
+                drag = false; btn.style.cursor = "move"; btn.style.transition = "box-shadow 0.2s,border 0.2s,transform 0.2s"; e.stopPropagation();
+                const W = window.innerWidth, H = window.innerHeight;
+                // Save as ratio (0-1) of current window size
+                this._save("buttonPosition", {
+                    rx: (parseInt(btn.style.left)   || 0) / W,
+                    ry: (parseInt(btn.style.bottom) || 0) / H
+                });
+                if (Date.now() - t0 < 200 && Math.hypot(e.clientX - x0, e.clientY - y0) < 5) this.toggle();
+            };
+
+            btn.addEventListener("mousedown", onDown);
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("mouseup", onUp);
             btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.15)");
             btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
-
-            // Inject into Discord's voice controls bar next to mute/deafen buttons
-            const voiceBar = document.querySelector('[class*="actionButtons"], [class*="voiceActions"]')
-                          ?? document.querySelector('[aria-label*="Mute"]')?.parentElement;
-
-            if (voiceBar) {
-                voiceBar.appendChild(btn);
-            } else {
-                // Fallback: fixed bottom-left if voice bar not found (not in a VC)
-                btn.style.position = "fixed";
-                btn.style.bottom   = "80px";
-                btn.style.left     = "10px";
-                btn.style.zIndex   = "9999";
-                document.body.appendChild(btn);
-            }
-
-            this._cleanupButton = () => btn.remove();
+            btn.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); });
+            document.body.appendChild(btn);
+            this._cleanupButton = () => { btn.removeEventListener("mousedown",onDown); document.removeEventListener("mousemove",onMove); document.removeEventListener("mouseup",onUp); btn.remove(); };
         };
         ensure();
         this._toggleObserver?.disconnect();
         this._toggleObserver = new MutationObserver(ensure);
         this._toggleObserver.observe(document.body, { childList: true, subtree: true });
+
+        // Re-apply ratio-based position on window resize
+        this._resizeHandler = () => {
+            const btn = document.getElementById(`${this.getName()}-toggle`);
+            if (!btn) return;
+            const pos = this._load("buttonPosition", { rx: 0.01, ry: 0.92 });
+            const W = window.innerWidth, H = window.innerHeight;
+            btn.style.left   = Math.max(0, Math.min(W - 32, Math.round((pos.rx ?? 0.01) * W))) + "px";
+            btn.style.bottom = Math.max(0, Math.min(H - 32, Math.round((pos.ry ?? 0.92) * H))) + "px";
+        };
+        window.addEventListener("resize", this._resizeHandler);
     }
 
     _removeBtn() {
         this._toggleObserver?.disconnect(); this._toggleObserver = null;
+        if (this._resizeHandler) { window.removeEventListener("resize", this._resizeHandler); this._resizeHandler = null; }
         this._cleanupButton?.(); this._cleanupButton = null;
         document.getElementById(`${this.getName()}-toggle`)?.remove();
     }
