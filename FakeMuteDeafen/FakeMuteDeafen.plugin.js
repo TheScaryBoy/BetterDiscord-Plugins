@@ -2,7 +2,7 @@
  * @name Fake Mute&Deafen
  * @author TSB Inc.
  * @description Speak while Muted and Hear anyone while Deafened
- * @version 1.0.1
+ * @version 1.0.2
  * @authorLink https://github.com/TheScaryBoy
  * @website https://github.com/TheScaryBoy/BetterDiscord-Plugins
  * @source https://github.com/TheScaryBoy/BetterDiscord-Plugins/tree/main/FakeMuteDeafen
@@ -13,7 +13,7 @@ module.exports = class FakeMuteDeafen {
 
     getName()        { return "Fake Mute&Deafen"; }
     getDescription() { return "Speak while Muted and Hear anyone while Deafened"; }
-    getVersion()     { return "1.0.1"; }
+    getVersion()     { return "1.0.2"; }
     getAuthor()      { return "TSB Inc."; }
 
     // Discord webpack module IDs — update these if Discord changes them
@@ -205,7 +205,7 @@ module.exports = class FakeMuteDeafen {
     }
 
     _checkForUpdate() {
-        const url = "https://raw.githubusercontent.com/TheScaryBoy/BetterDiscord-Plugins/main/FakeMuteDeafen/FakeMuteDeafen.plugin.js";
+        const url = `https://raw.githubusercontent.com/TheScaryBoy/BetterDiscord-Plugins/main/FakeMuteDeafen/FakeMuteDeafen.plugin.js?_=${Date.now()}`;
         BdApi.Net.fetch(url)
             .then(r => r.text())
             .then(text => {
@@ -215,16 +215,41 @@ module.exports = class FakeMuteDeafen {
                 const local  = this.getVersion().split(".").map(Number);
                 for (let i = 0; i < 3; i++) {
                     if ((remote[i] ?? 0) > (local[i] ?? 0)) {
-                        BdApi.UI.showToast(
-                            `Fake Mute&Deafen: Update available (v${match[1]}) — check GitHub!`,
-                            { type: "warning", timeout: 8000 }
-                        );
+                        this._promptUpdate(match[1], text);
                         return;
                     }
                     if ((remote[i] ?? 0) < (local[i] ?? 0)) return;
                 }
             })
-            .catch(() => {}); // silently fail if offline
+            .catch(() => {});
+    }
+
+    _promptUpdate(remoteVersion, remoteText) {
+        const fs       = require("fs");
+        const filePath = require("path").join(BdApi.Plugins.folder, "FakeMuteDeafen.plugin.js");
+
+        BdApi.UI.showConfirmationModal(
+            "Fake Mute&Deafen — Update Available",
+            `Version **v${remoteVersion}** is available (you have v${this.getVersion()}).
+Would you like to update now?`,
+            {
+                confirmText: "Update",
+                cancelText:  "Later",
+                onConfirm: () => {
+                    try {
+                        fs.writeFileSync(filePath, remoteText, "utf8");
+                        BdApi.UI.showToast("Fake Mute&Deafen updated! Reloading plugin...", { type: "success", timeout: 3000 });
+                        setTimeout(() => {
+                            BdApi.Plugins.disable("Fake Mute&Deafen");
+                            BdApi.Plugins.enable("Fake Mute&Deafen");
+                        }, 1000);
+                    } catch (e) {
+                        BdApi.UI.showToast("Update failed — could not write file.", { type: "error", timeout: 5000 });
+                        console.error("[FakeMD] Update error:", e);
+                    }
+                }
+            }
+        );
     }
 
     stop() {
