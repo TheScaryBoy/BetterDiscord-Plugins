@@ -201,7 +201,7 @@ module.exports = class FakeMuteDeafen {
             this.lockedMute = vs.mute; this.lockedDeafen = vs.deaf;
             this._startGlow();
         }
-        setTimeout(() => this._checkForUpdate(), 3000);
+        setTimeout(() => this._checkForUpdate(), 15000);
     }
 
     _checkForUpdate() {
