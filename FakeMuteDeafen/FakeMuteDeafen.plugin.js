@@ -2,7 +2,7 @@
  * @name Fake Mute&Deafen
  * @author TSB Inc.
  * @description Speak while Muted and Hear anyone while Deafened
- * @version 1.0.1
+ * @version 1.0.0
  * @authorLink https://github.com/TheScaryBoy
  * @website https://github.com/TheScaryBoy/BetterDiscord-Plugins
  * @source https://github.com/TheScaryBoy/BetterDiscord-Plugins/tree/main/FakeMuteDeafen
@@ -13,7 +13,7 @@ module.exports = class FakeMuteDeafen {
 
     getName()        { return "Fake Mute&Deafen"; }
     getDescription() { return "Speak while Muted and Hear anyone while Deafened"; }
-    getVersion()     { return "1.0.1"; }
+    getVersion()     { return "1.0.0"; }
     getAuthor()      { return "TSB Inc."; }
 
     // Discord webpack module IDs — update these if Discord changes them
