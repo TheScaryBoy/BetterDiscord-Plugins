@@ -2,7 +2,7 @@
  * @name Fake Mute&Deafen
  * @author TSB Inc.
  * @description Speak while Muted and Hear anyone while Deafened
- * @version 1.0.2
+ * @version 1.0.3
  * @authorLink https://github.com/TheScaryBoy
  * @website https://github.com/TheScaryBoy/BetterDiscord-Plugins
  * @source https://github.com/TheScaryBoy/BetterDiscord-Plugins/tree/main/FakeMuteDeafen
@@ -13,7 +13,7 @@ module.exports = class FakeMuteDeafen {
 
     getName()        { return "Fake Mute&Deafen"; }
     getDescription() { return "Speak while Muted and Hear anyone while Deafened"; }
-    getVersion()     { return "1.0.2"; }
+    getVersion()     { return "1.0.3"; }
     getAuthor()      { return "TSB Inc."; }
 
     // Discord webpack module IDs — update these if Discord changes them
@@ -310,7 +310,7 @@ Would you like to update now?`,
         };
         panel.appendChild(section("Volume Reduction on Enable"));
         panel.appendChild(el("div", { style: "display:flex;align-items:center;gap:12px;margin-bottom:4px;" }, slider, volLabel));
-        panel.appendChild(hint("Reduces output volume by selected % when enabled. Restored on disable."));
+        panel.appendChild(hint("Reduces output volume by this % (Discord UI scale) when enabled. Restored on disable."));
 
         return panel;
     }
@@ -328,49 +328,42 @@ Would you like to update now?`,
         const ensure = () => {
             const id = `${this.getName()}-toggle`;
             if (document.getElementById(id)) return;
-            const pos    = this._load("buttonPosition", { x: 1, y: 95 }); // % from left/bottom
-            const left   = Math.round((pos.x ?? 1)  / 100 * window.innerWidth);
-            const bottom = Math.round((pos.y ?? 95) / 100 * window.innerHeight);
+
             const c   = this.enabled ? "#ed4245" : "#3ba55d";
             const btn = document.createElement("div");
             btn.id = id;
-            btn.style.cssText = `position:fixed;bottom:${bottom}px;left:${left}px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:move;z-index:9999;user-select:none;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);transition:box-shadow 0.2s,border 0.2s,transform 0.2s;box-shadow:0 0 12px ${c};border:2px solid ${c};`;
+            btn.style.cssText = `width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);transition:box-shadow 0.2s,border 0.2s,transform 0.2s;box-shadow:0 0 12px ${c};border:2px solid ${c};flex-shrink:0;margin:0 4px;`;
             btn.innerHTML = `<img src="https://em-content.zobj.net/source/apple/391/skull_1f480.png" style="width:18px;height:18px;pointer-events:none;" draggable="false">`;
-            btn.title = `Drag to move | Click or ${this._keybindLabel()} to toggle`;
-
-            let drag = false, t0, x0, y0, b0, l0;
-            const onDown = e => { drag=true; t0=Date.now(); x0=e.clientX; y0=e.clientY; b0=parseInt(btn.style.bottom)||0; l0=parseInt(btn.style.left)||0; btn.style.cursor="grabbing"; btn.style.transition="none"; e.stopPropagation(); e.preventDefault(); };
-            const onMove = e => { if (!drag) return; btn.style.left=Math.max(0,Math.min(window.innerWidth-32,l0+e.clientX-x0))+"px"; btn.style.bottom=Math.max(0,Math.min(window.innerHeight-32,b0-e.clientY+y0))+"px"; };
-            const onUp   = e => { if (!drag) return; drag=false; btn.style.cursor="move"; btn.style.transition="box-shadow 0.2s,border 0.2s,transform 0.2s"; e.stopPropagation(); this._save("buttonPosition",{x:(parseInt(btn.style.left)||0)/window.innerWidth*100,y:(parseInt(btn.style.bottom)||0)/window.innerHeight*100}); if(Date.now()-t0<200&&Math.hypot(e.clientX-x0,e.clientY-y0)<5)this.toggle(); };
-
-            btn.addEventListener("mousedown", onDown);
-            document.addEventListener("mousemove", onMove);
-            document.addEventListener("mouseup", onUp);
+            btn.title = `Click or ${this._keybindLabel()} to toggle`;
+            btn.addEventListener("click", () => this.toggle());
             btn.addEventListener("mouseenter", () => btn.style.transform = "scale(1.15)");
             btn.addEventListener("mouseleave", () => btn.style.transform = "scale(1)");
-            btn.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); });
-            document.body.appendChild(btn);
-            this._cleanupButton = () => { btn.removeEventListener("mousedown",onDown); document.removeEventListener("mousemove",onMove); document.removeEventListener("mouseup",onUp); btn.remove(); };
+
+            // Inject into Discord's voice controls bar next to mute/deafen buttons
+            const voiceBar = document.querySelector('[class*="actionButtons"], [class*="voiceActions"]')
+                          ?? document.querySelector('[aria-label*="Mute"]')?.parentElement;
+
+            if (voiceBar) {
+                voiceBar.appendChild(btn);
+            } else {
+                // Fallback: fixed bottom-left if voice bar not found (not in a VC)
+                btn.style.position = "fixed";
+                btn.style.bottom   = "80px";
+                btn.style.left     = "10px";
+                btn.style.zIndex   = "9999";
+                document.body.appendChild(btn);
+            }
+
+            this._cleanupButton = () => btn.remove();
         };
         ensure();
         this._toggleObserver?.disconnect();
         this._toggleObserver = new MutationObserver(ensure);
         this._toggleObserver.observe(document.body, { childList: true, subtree: true });
-
-        // Reposition button as % of window on resize (handles moving to different resolution monitor)
-        this._resizeHandler = () => {
-            const btn = document.getElementById(`${this.getName()}-toggle`);
-            if (!btn) return;
-            const pos = this._load("buttonPosition", { x: 1, y: 95 });
-            btn.style.left   = Math.round((pos.x ?? 1)  / 100 * window.innerWidth)  + "px";
-            btn.style.bottom = Math.round((pos.y ?? 95) / 100 * window.innerHeight) + "px";
-        };
-        window.addEventListener("resize", this._resizeHandler);
     }
 
     _removeBtn() {
         this._toggleObserver?.disconnect(); this._toggleObserver = null;
-        if (this._resizeHandler) { window.removeEventListener("resize", this._resizeHandler); this._resizeHandler = null; }
         this._cleanupButton?.(); this._cleanupButton = null;
         document.getElementById(`${this.getName()}-toggle`)?.remove();
     }
