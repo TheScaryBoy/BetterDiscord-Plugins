@@ -16,7 +16,7 @@ Appear muted/deafened to the server while still being able to speak and hear eve
 - 💀 Draggable floating skull button — red when active, green when off
 - 🔴 Glow indicators on the mute/deafen buttons when locks are active
 - ⌨️ Configurable keybind
-- 🔉 Volume reduction on enable (Discord UI scale), fully restored on disable
+- 🔉 Configurable volume reduction on enable, fully restored on disable
 - 📐 Button position saved as % of window — stays in place across different monitor resolutions
 
 ## 🔧 How it works
