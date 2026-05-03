@@ -18,6 +18,7 @@ Appear muted/deafened to the server while still being able to speak and hear eve
 - ⌨️ Configurable keybind
 - 🔉 Configurable volume reduction on enable, fully restored on disable
 - 📐 Button position saved as % of window — stays in place across different monitor resolutions
+- 🔃 Automatic version check and update prompt that works independent from the BetterDiscord check for updates
 
 ## 🔧 How it works
 
