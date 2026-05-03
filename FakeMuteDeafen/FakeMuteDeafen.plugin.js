@@ -2,7 +2,7 @@
  * @name Fake Mute&Deafen
  * @author TSB Inc.
  * @description Speak while Muted and Hear anyone while Deafened
- * @version 1.0.1
+ * @version 1.0.0
  * @authorLink https://github.com/TheScaryBoy
  * @website https://github.com/TheScaryBoy/BetterDiscord-Plugins
  * @source https://github.com/TheScaryBoy/BetterDiscord-Plugins/tree/main/FakeMuteDeafen
@@ -13,7 +13,7 @@ module.exports = class FakeMuteDeafen {
 
     getName()        { return "Fake Mute&Deafen"; }
     getDescription() { return "Speak while Muted and Hear anyone while Deafened"; }
-    getVersion()     { return "1.0.1"; }
+    getVersion()     { return "1.0.0"; }
     getAuthor()      { return "TSB Inc."; }
 
     // Discord webpack module IDs — update these if Discord changes them
@@ -201,6 +201,30 @@ module.exports = class FakeMuteDeafen {
             this.lockedMute = vs.mute; this.lockedDeafen = vs.deaf;
             this._startGlow();
         }
+        setTimeout(() => this._checkForUpdate(), 3000);
+    }
+
+    _checkForUpdate() {
+        const url = "https://raw.githubusercontent.com/TheScaryBoy/BetterDiscord-Plugins/main/FakeMuteDeafen/FakeMuteDeafen.plugin.js";
+        BdApi.Net.fetch(url)
+            .then(r => r.text())
+            .then(text => {
+                const match = text.match(/@version\s+([\d.]+)/);
+                if (!match) return;
+                const remote = match[1].split(".").map(Number);
+                const local  = this.getVersion().split(".").map(Number);
+                for (let i = 0; i < 3; i++) {
+                    if ((remote[i] ?? 0) > (local[i] ?? 0)) {
+                        BdApi.UI.showToast(
+                            `Fake Mute&Deafen: Update available (v${match[1]}) — check GitHub!`,
+                            { type: "warning", timeout: 8000 }
+                        );
+                        return;
+                    }
+                    if ((remote[i] ?? 0) < (local[i] ?? 0)) return;
+                }
+            })
+            .catch(() => {}); // silently fail if offline
     }
 
     stop() {
