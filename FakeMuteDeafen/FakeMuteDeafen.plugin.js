@@ -2,7 +2,7 @@
  * @name Fake Mute&Deafen
  * @author TSB Inc.
  * @description Speak while Muted and Hear anyone while Deafened
- * @version 1.0.0
+ * @version 1.0.1
  * @authorLink https://github.com/TheScaryBoy
  * @website https://github.com/TheScaryBoy/BetterDiscord-Plugins
  * @source https://github.com/TheScaryBoy/BetterDiscord-Plugins/tree/main/FakeMuteDeafen
@@ -261,7 +261,7 @@ module.exports = class FakeMuteDeafen {
         };
         panel.appendChild(section("Volume Reduction on Enable"));
         panel.appendChild(el("div", { style: "display:flex;align-items:center;gap:12px;margin-bottom:4px;" }, slider, volLabel));
-        panel.appendChild(hint("Reduces output volume by this % (Discord UI scale) when enabled. Restored on disable."));
+        panel.appendChild(hint("Reduces output volume by this % when enabled. Restored on disable."));
 
         return panel;
     }
