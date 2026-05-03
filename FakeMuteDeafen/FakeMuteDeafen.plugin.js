@@ -13,7 +13,7 @@ module.exports = class FakeMuteDeafen {
 
     getName()        { return "Fake Mute&Deafen"; }
     getDescription() { return "Speak while Muted and Hear anyone while Deafened"; }
-    getVersion()     { return "1.0.0"; }
+    getVersion()     { return "1.0.1"; }
     getAuthor()      { return "TSB Inc."; }
 
     // Discord webpack module IDs — update these if Discord changes them
