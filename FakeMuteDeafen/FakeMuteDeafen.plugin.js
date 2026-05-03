@@ -32,6 +32,7 @@ module.exports = class FakeMuteDeafen {
         this._cleanupButton   = null;
         this._resizeHandler   = null;
         // Patch originals
+        this._socket               = null;
         this._origDispatch         = null;
         this._origVoiceStateUpdate = null;
         // Cached modules
@@ -123,7 +124,6 @@ module.exports = class FakeMuteDeafen {
             const vs = this._voiceState();
             this.lockedMute   = vs.mute;
             this.lockedDeafen = vs.deaf;
-            // Save and reduce volume
             this._origVolume = this._store?.getOutputVolume() ?? null;
             if (this._origVolume !== null) {
                 const targetUI = Math.round(this._toUI(this._origVolume) * (100 - this._volumeReduction) / 100);
@@ -138,7 +138,9 @@ module.exports = class FakeMuteDeafen {
             this._stopGlow();
         }
         this._save("enabledState", this.enabled);
-        this._updateBtn();
+        const _c = this.enabled ? "#ed4245" : "#3ba55d";
+        const _btn = document.getElementById(`${this.getName()}-toggle`);
+        if (_btn) { _btn.style.boxShadow = `0 0 12px ${_c}`; _btn.style.border = `2px solid ${_c}`; }
         const kb = this._keybind ? ` [${this._keybindLabel()}]` : "";
         BdApi.UI.showToast(`Fake Mute/Deafen: ${this.enabled ? "ENABLED" : "DISABLED"}${kb}`,
             { type: this.enabled ? "error" : "success" });
@@ -310,26 +312,19 @@ Would you like to update now?`,
         };
         panel.appendChild(section("Volume Reduction on Enable"));
         panel.appendChild(el("div", { style: "display:flex;align-items:center;gap:12px;margin-bottom:4px;" }, slider, volLabel));
-        panel.appendChild(hint("Reduces output volume by this % (Discord UI scale) when enabled. Restored on disable."));
+        panel.appendChild(hint("Reduces output volume by selected % when enabled. Restored on disable."));
 
         return panel;
     }
 
     // ─── Floating button ──────────────────────────────────────────────────────
 
-    _updateBtn() {
-        const btn = document.getElementById(`${this.getName()}-toggle`);
-        if (!btn) return;
-        const c = this.enabled ? "#ed4245" : "#3ba55d";
-        btn.style.boxShadow = `0 0 12px ${c}`; btn.style.border = `2px solid ${c}`;
-    }
 
     _addBtn() {
         const ensure = () => {
             const id = `${this.getName()}-toggle`;
             if (document.getElementById(id)) return;
 
-            // Use window (Discord app) dimensions — reliable across any monitor
             const W = window.innerWidth, H = window.innerHeight;
             const pos    = this._load("buttonPosition", { rx: 0.01, ry: 0.92 });
             const left   = Math.max(0, Math.min(W - 32, Math.round((pos.rx ?? 0.01) * W)));
@@ -354,7 +349,6 @@ Would you like to update now?`,
                 if (!drag) return;
                 drag = false; btn.style.cursor = "move"; btn.style.transition = "box-shadow 0.2s,border 0.2s,transform 0.2s"; e.stopPropagation();
                 const W = window.innerWidth, H = window.innerHeight;
-                // Save as ratio (0-1) of current window size
                 this._save("buttonPosition", {
                     rx: (parseInt(btn.style.left)   || 0) / W,
                     ry: (parseInt(btn.style.bottom) || 0) / H
