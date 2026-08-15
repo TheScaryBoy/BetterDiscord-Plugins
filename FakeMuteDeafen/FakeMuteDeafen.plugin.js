@@ -2,7 +2,7 @@
  * @name Fake Mute&Deafen
  * @author TSB Inc.
  * @description Speak while Muted and Hear anyone while Deafened
- * @version 1.0.4
+ * @version 1.0.5
  * @authorLink https://github.com/TheScaryBoy
  * @website https://github.com/TheScaryBoy/BetterDiscord-Plugins
  * @source https://github.com/TheScaryBoy/BetterDiscord-Plugins/tree/main/FakeMuteDeafen
@@ -13,11 +13,11 @@ module.exports = class FakeMuteDeafen {
 
     getName()        { return "Fake Mute&Deafen"; }
     getDescription() { return "Speak while Muted and Hear anyone while Deafened"; }
-    getVersion()     { return "1.0.4"; }
+    getVersion()     { return "1.0.5"; }
     getAuthor()      { return "TSB Inc."; }
 
     // Discord webpack module IDs — update these if Discord changes them
-    static M = { DISPATCHER: 228366, GATEWAY: 587626, AUDIO: 827343, STORE: 51760 };
+    static M = { DISPATCHER: 228366, GATEWAY: 617710, AUDIO: 827343, STORE: 626822 };
 
     constructor() {
         this.enabled          = false;
@@ -36,10 +36,7 @@ module.exports = class FakeMuteDeafen {
         this._origDispatch         = null;
         this._origVoiceStateUpdate = null;
         // Cached modules
-        this._wpRequire  = null;
-        this._dispatcher = null;
         this._vsStore    = null; // voice state store
-        this._me         = null; // MediaEngineStore
         this._user       = null; // current user
     }
 
@@ -51,17 +48,10 @@ module.exports = class FakeMuteDeafen {
     }
     _save(key, val) { try { BdApi.Data.save(this.getName(), key, val); } catch (_) {} }
 
-    get _wp() {
-        return this._wpRequire ??= window.webpackChunkdiscord_app?.push([[Symbol()], {}, r => r]);
-    }
-    _mod(id) { return this._wp?.(id); }
+    _mod(id) { return BdApi.Webpack.getById(id); }
 
-    get _flux() {
-        return this._dispatcher ??= this._mod(FakeMuteDeafen.M.DISPATCHER)?.h ?? null;
-    }
-    get _store() {
-        return this._me ??= this._mod(FakeMuteDeafen.M.STORE)?.Ay ?? null;
-    }
+    get _flux() { return this._mod(FakeMuteDeafen.M.DISPATCHER)?.h ?? null; }
+    get _store() { return this._mod(FakeMuteDeafen.M.STORE)?.Ay ?? null; }
 
     _voiceState() {
         this._vsStore ??= BdApi.Webpack.getModule(m => m?.getVoiceStateForUser);
@@ -318,7 +308,6 @@ Would you like to update now?`,
     }
 
     // ─── Floating button ──────────────────────────────────────────────────────
-
 
     _addBtn() {
         const ensure = () => {
